@@ -370,9 +370,9 @@ class ContentPipelineFlow(Flow[ContentPipelineState]):
                     "topic": self.state.topic,
                     "content_type": self.state.content_type,
                     "content": (
-                        self.state.tweet
-                        if self.state.content_type == "tweet"
-                        else self.state.linkedin_post
+                        self.state.tweet.model_dump_json()
+                        if self.state.contenty_type == "tweet"
+                        else self.state.linkedin_post.model_dump_json()
                     ),
                 }
             )
@@ -396,7 +396,7 @@ class ContentPipelineFlow(Flow[ContentPipelineState]):
         score = self.state.score
 
         # 품질 기준 충족: 파이프라인 종료
-        if score.score >= 8:
+        if score.score >= 7:
             return "check_passed"
         # 품질 미달: 콘텐츠 타입별로 재생성 경로로 분기
         else:
@@ -420,8 +420,28 @@ class ContentPipelineFlow(Flow[ContentPipelineState]):
         - API로 발행
         - 알림 전송 등 후처리 가능
         """
-        print("Finalizing content")
-        # TODO: 실제 운영에서는 여기서 콘텐츠를 저장/발행
+        print("🎉 Finalizing content...")
+
+        if self.state.content_type == "blog":
+            print(f"📝 Blog Post: {self.state.blog_post.title}")
+            print(f"🔍 SEO Score: {self.state.score.score}/100")
+        elif self.state.content_type == "tweet":
+            print(f"🐦 Tweet: {self.state.tweet}")
+            print(f"🚀 Virality Score: {self.state.score.score}/100")
+        elif self.state.content_type == "linkedin":
+            print(f"💼 LinkedIn: {self.state.linkedin_post.title}")
+            print(f"🚀 Virality Score: {self.state.score.score}/100")
+
+        print("✅ Content ready for publication!")
+        return (
+            self.state.linkedin_post
+            if self.state.content_type == "linkedin"
+            else (
+                self.state.tweet
+                if self.state.content_type == "tweet"
+                else self.state.blog_post
+            )
+        )
 
 
 # ============================================================
@@ -446,7 +466,7 @@ flow.kickoff(
 # 3. conduct_research_router: 콘텐츠 타입별 분기
 # 4. handle_make_blog: 블로그 포스트 생성
 # 5. check_seo: SEO 점수 평가
-# 6. score_router: 점수 >= 8이면 완료, 아니면 4단계로 재진입
+# 6. score_router: 점수 >= 7이면 완료, 아니면 4단계로 재진입
 # 7. finalize_content: 최종 완료
 
 # flow.plot()  # Flow의 시각화 다이어그램 생성 (주석 해제하면 그래프 출력)
